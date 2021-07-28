@@ -1,0 +1,54 @@
+#include <msp430.h> 
+
+
+void DataTransmit(void);
+
+unsigned volatile i = 0;
+
+int main(void)
+{
+	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
+	
+	// Светодиод P1.0
+	P1SEL &= ~BIT0; // I/O для P1.0
+	P1SEL2 &= ~BIT0;
+
+	P1DIR |= BIT0; // P1.0 output
+
+	// P1.1 (приемник импульсов)
+	P1SEL |= BIT1; // AF для P1.1
+	P1SEL2 &= ~BIT1;
+
+	// Таймер
+	TACTL |= TACLR;              // Очистка регистра на всякий случай
+	TACTL = TASSEL_2 | MC_2 | ID_0; // SMLK, cont mode, /2
+	TACTL &= ~TAIE;              // Запрет прерываний таймера
+
+	TACCTL0 |= CM_1;             // Капча L-H
+	TACCTL0 |= CCIS_0;           // Выбрали input пин P1.1
+	TACCTL0 |= CAP;              // Capture mode
+
+
+    // Прерывания
+    __enable_interrupt();        // Разрешение прерываний вообще
+    TACCTL0 |= CCIE;             // Capture/compare прерывания включены
+    TACCTL0 &= ~CCIFG;           // Очистка флага
+
+
+while(1){}
+
+
+
+	return 0;
+}
+
+// Обработчик прерываний
+
+
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void Timer_A (void)
+{
+  P1OUT ^= BIT0;
+  i++;
+  TACCTL0 &= ~CCIFG;
+}
