@@ -1,0 +1,71 @@
+#include <msp430.h> 
+
+
+void DataTransmit(void);
+
+unsigned volatile i = 0;
+unsigned volatile count, count0, count1;
+
+int main(void)
+{
+	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
+	
+
+
+    // Clock
+//    BCSCTL1 |= RSEL0 | RSEL1 | RSEL2 | RSEL3; // RSEL = 15;
+//    DCOCTL |=  DCO1 | DCO0 | DCO2;            // DCO = 7;
+	BCSCTL1 = CALBC1_16MHZ;
+	DCOCTL = CALDCO_16MHZ;
+
+	// P1.1 (приемник импульсов)
+	P1SEL |= BIT1; // AF для P1.1
+	P1SEL2 &= ~BIT1;
+
+	// Таймер
+	TACTL |= TACLR;              // Очистка регистра на всякий случай
+	TACTL = TASSEL_2   | MC_0 | ID_0 ; // SMLK, stop mode, /1
+	TACTL &= ~TAIE;              // Запрет прерываний таймера
+
+	TACCTL0 |= CM_3;             // Capture L-H
+	TACCTL0 |= CCIS_0;           // Выбрали input пин P1.1
+	TACCTL0 |= CAP;              // Capture mode
+
+
+    // Прерывания
+    __enable_interrupt();        // Разрешение прерываний вообще
+    TACCTL0 |= CCIE;             // Capture/compare прерывания включены
+    TACCTL0 &= ~CCIFG;           // Очистка флага
+
+
+while(1){}
+
+
+
+	return 0;
+}
+
+// Обработчик прерываний
+
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void Timer_A (void)
+{
+
+
+  i++;
+
+      if(i == 1){ count0 = TACCR0;
+      TACTL |=  MC_2; //start timer in cont mode
+
+      }
+      else if(i ==2){ TACTL &=  ~BIT5; //stop timer
+      count1 = TACCR0;
+      count = count1 - count0;
+      TACCTL0 &= ~CCIE;
+      }
+
+
+
+  TACCTL0 &= ~CCIFG;
+}
+
