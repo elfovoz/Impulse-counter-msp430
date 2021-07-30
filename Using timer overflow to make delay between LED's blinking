@@ -1,0 +1,45 @@
+#include <msp430.h> 
+
+
+int main(void)
+{
+	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
+	
+    // Светодиод
+	P1SEL &= ~BIT0;
+	P1SEL2 &= ~BIT0;
+
+	P1DIR |= BIT0;
+
+    // Clock
+	BCSCTL1 = CALBC1_1MHZ;
+	DCOCTL = CALDCO_1MHZ;
+
+	// Таймер
+	TACCR0 |= 0xFFFF;           // Считаем до FFFF
+	TACTL |= TACLR;              // Очистка регистра на всякий случай
+	TACTL = TASSEL_2   | MC_1 | ID_3 ; // SMLK, up mode, /8
+
+
+    __enable_interrupt();
+	TACCTL0 &= ~CAP;            // Compare mode
+    TACCTL0 |= CCIE;            // C/c interrupt enable
+    TACCTL0 &= ~CCIFG;
+
+
+
+while(1){
+}
+
+	return 0;
+}
+
+// Обработчик прерываний
+
+#pragma vector= TIMER0_A0_VECTOR  //
+__interrupt void Timer_A (void)
+{
+    P1OUT ^= BIT0;
+
+   TACCTL0 &= ~CCIFG;
+}
