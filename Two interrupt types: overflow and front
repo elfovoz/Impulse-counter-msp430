@@ -1,0 +1,59 @@
+#include <msp430.h> 
+
+// Макросы для выбора фронта
+#define Pos   TACCTL1 |= CM_1
+#define Neg   TACCTL1 |= CM_2
+#define Both  TACCTL1 |= CM_3
+
+unsigned volatile i = 0;
+unsigned volatile a = 0;
+
+int main(void)
+{
+    WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
+
+        // P1.2 (приемник импульсов)
+        P1SEL |= BIT2; // AF для P1.1
+        P1SEL2 &= ~BIT2;
+
+        P1DIR &= ~BIT2;
+
+        // Clock
+        BCSCTL1 = CALBC1_16MHZ;
+        DCOCTL = CALDCO_16MHZ;
+
+        // Таймер
+
+        TACTL |= TACLR;                         // Очистка регистра на всякий случай
+        TACTL = TASSEL_2  | MC_2 | ID_3 | TAIE; // SMLK, cont mode, /8, разрешены прерывания
+
+        TACCTL1 =  CCIE | CCIS_0 | CAP;  // Разрешены прерывания, both edges, CCIxA, capture mode
+        Both;
+
+        TACTL &= ~TAIFG;                        // Очистка флагов
+        TACCTL1 &= ~CCIFG;
+        TACCTL1 &= ~COV;
+
+            __enable_interrupt();
+
+
+                return 0;
+            }
+
+            // Обработчик прерываний
+
+void __attribute__ ((interrupt(TIMER0_A1_VECTOR))) Timer0_A (void)
+{
+
+  switch( TAIV )
+  {
+  case  2:   i++;                                    // Прерывание по фронту
+           break;
+
+  case  4: break;
+
+  case 0x0A: a++;                                    // Прерывание по переполнению таймера
+
+           break;
+ }
+}
